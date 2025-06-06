@@ -1,7 +1,8 @@
 use jni::{AttachGuard, strings::JNIString};
 
 use crate::{
-    JClass, JObject, JValue, Object, keygen_parameter_spec::KeyGenParameterSpec, keypair::KeyPair,
+    JClass, JObject, JObjectWrapper, JValue, Object, keygen_parameter_spec::KeyGenParameterSpec,
+    keypair::KeyPair,
 };
 
 pub enum Algorithm {
@@ -50,8 +51,13 @@ pub enum Exception {
 /// A wrapper around a JObject representing a KeyPairGenerator instance
 /// KeyPairGenerator being a singleton, it must be created using the `get_instance()` method
 /// The instance obtained using `get_instance()` can then be used to generate a keypair
-pub struct KeyPairGenerator<'a> {
-    inner: JObject<'a>,
+#[derive(Debug, Clone, Copy)]
+pub struct KeyPairGenerator<'a>(JObjectWrapper<'a>);
+
+impl<'a> From<JObject<'a>> for KeyPairGenerator<'a> {
+    fn from(value: JObject<'a>) -> Self {
+        Self(value.into())
+    }
 }
 
 impl<'a> KeyPairGenerator<'a> {
@@ -72,30 +78,29 @@ impl<'a> KeyPairGenerator<'a> {
             .new_string(&provider)
             .expect("Cannot create string for provider");
 
-        Ok(Self {
-            inner: env
-                .call_static_method(
-                    keypair_generator_class,
-                    "getInstance",
-                    "(Ljava/lang/String;Ljava/lang/String;)Ljava/security/KeyPairGenerator;",
-                    &[JValue::Object(algorithm), JValue::Object(provider)],
-                )
-                .map_err(Exception::NoSuchAlgorithmException)?
-                .l()
-                .expect("Failed to get JObject"),
-        })
+        Ok(env
+            .call_static_method(
+                keypair_generator_class,
+                "getInstance",
+                "(Ljava/lang/String;Ljava/lang/String;)Ljava/security/KeyPairGenerator;",
+                &[JValue::Object(algorithm), JValue::Object(provider)],
+            )
+            .map_err(Exception::NoSuchAlgorithmException)?
+            .l()
+            .expect("Failed to get JObject")
+            .into())
     }
 
     pub fn initialize(
-        &mut self,
+        self,
         keygen_parameter_spec: KeyGenParameterSpec<'a>,
         env: &mut AttachGuard<'a>,
     ) -> Result<(), Exception> {
         let res = env.call_method(
-            &self.inner,
+            self.l(),
             "initialize",
             "(Ljava/security/spec/AlgorithmParameterSpec;)V",
-            &[JValue::Object(&keygen_parameter_spec.inner)],
+            &[JValue::Object(&keygen_parameter_spec.l())],
         )
         // .map_err(Exception::InvalidAlgorithmParameterException)?
         ;
@@ -108,19 +113,17 @@ impl<'a> KeyPairGenerator<'a> {
         Ok(())
     }
 
-    pub fn generate_keypair(&self, env: &mut AttachGuard<'a>) -> KeyPair<'a> {
-        KeyPair {
-            inner: env
-                .call_method(
-                    &self.inner,
-                    "generateKeyPair",
-                    "()Ljava/security/KeyPair;",
-                    &[],
-                )
-                .expect("Failed to call generateKeyPair")
-                .l()
-                .expect("Failed to get JObject"),
-        }
+    pub fn generate_keypair(self, env: &mut AttachGuard<'a>) -> KeyPair<'a> {
+        env.call_method(
+            self.l(),
+            "generateKeyPair",
+            "()Ljava/security/KeyPair;",
+            &[],
+        )
+        .expect("Failed to call generateKeyPair")
+        .l()
+        .expect("Failed to get JObject")
+        .into()
     }
 }
 
@@ -130,7 +133,7 @@ impl<'a> Object<'a> for KeyPairGenerator<'a> {
             .expect("Failed to find KeyPairGenerator class")
     }
 
-    fn l(&self) -> &JObject<'a> {
-        &self.inner
+    fn l(self) -> JObject<'a> {
+        self.0.l()
     }
 }
