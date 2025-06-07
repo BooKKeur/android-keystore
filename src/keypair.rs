@@ -1,36 +1,36 @@
 use base64::Engine;
 use jni::objects::{JByteArray, JValue};
 
-use crate::{AttachGuard, JClass, JObject, JObjectWrapper, Object, keypair_generator::Algorithm};
+use crate::{AttachGuard, JClass, JObject, Object, keypair_generator::Algorithm};
 
-#[derive(Debug, Clone, Copy)]
-pub struct KeyPair<'a>(JObjectWrapper<'a>);
+#[derive(Debug)]
+pub struct KeyPair<'a>(JObject<'a>);
 
 impl<'a> From<JObject<'a>> for KeyPair<'a> {
     fn from(value: JObject<'a>) -> Self {
-        Self(value.into())
+        Self(value)
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct PublicKey<'a>(JObjectWrapper<'a>);
+#[derive(Debug)]
+pub struct PublicKey<'a>(JObject<'a>);
 
 impl<'a> From<JObject<'a>> for PublicKey<'a> {
     fn from(value: JObject<'a>) -> Self {
-        Self(value.into())
+        Self(value)
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct PrivateKey<'a>(JObjectWrapper<'a>);
+#[derive(Debug)]
+pub struct PrivateKey<'a>(JObject<'a>);
 
 impl<'a> From<JObject<'a>> for PrivateKey<'a> {
     fn from(value: JObject<'a>) -> Self {
-        Self(value.into())
+        Self(value)
     }
 }
 impl<'a> KeyPair<'a> {
-    pub fn get_public(self, env: &mut AttachGuard<'a>) -> jni::errors::Result<PublicKey<'a>> {
+    pub fn get_public(&self, env: &mut AttachGuard<'a>) -> jni::errors::Result<PublicKey<'a>> {
         Ok(env
             .call_method(self.l(), "getPublic", "()Ljava/security/PublicKey;", &[])
             .unwrap()
@@ -38,7 +38,7 @@ impl<'a> KeyPair<'a> {
             .into())
     }
 
-    pub fn get_private(self, env: &mut AttachGuard<'a>) -> jni::errors::Result<PrivateKey<'a>> {
+    pub fn get_private(&self, env: &mut AttachGuard<'a>) -> jni::errors::Result<PrivateKey<'a>> {
         Ok(env
             .call_method(self.l(), "getPrivate", "()Ljava/security/PrivateKey;", &[])
             .unwrap()
@@ -53,13 +53,13 @@ impl<'a> Object<'a> for KeyPair<'a> {
             .expect("Failed to find KeyPair class")
     }
 
-    fn l(self) -> JObject<'a> {
-        self.0.l()
+    fn l(&self) -> &JObject<'a> {
+        &self.0
     }
 }
 
 impl<'a> PublicKey<'a> {
-    pub fn get_decoded(self, env: &mut AttachGuard<'a>) -> String {
+    pub fn get_decoded(&self, env: &mut AttachGuard<'a>) -> String {
         let public_key_bytes: JByteArray<'_> = env
             .call_method(self.l(), "getEncoded", "()[B", &[])
             .expect("Failed to call getEncoded")
@@ -149,8 +149,8 @@ impl<'a> Object<'a> for PublicKey<'a> {
             .expect("Failed to find PublicKey class")
     }
 
-    fn l(self) -> JObject<'a> {
-        self.0.l()
+    fn l(&self) -> &JObject<'a> {
+        &self.0
     }
 }
 
@@ -160,7 +160,7 @@ impl<'a> Object<'a> for PrivateKey<'a> {
             .expect("Failed to find PrivateKey class")
     }
 
-    fn l(self) -> JObject<'a> {
-        self.0.l()
+    fn l(&self) -> &JObject<'a> {
+        &self.0
     }
 }

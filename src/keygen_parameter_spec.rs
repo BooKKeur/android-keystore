@@ -1,6 +1,6 @@
 use jni::{AttachGuard, objects::JClass};
 
-use crate::{JNIString, JObject, JObjectWrapper, JValue, Object, utils::make_string_array};
+use crate::{JNIString, JObject, JValue, Object, utils::make_string_array};
 
 #[repr(i32)]
 #[derive(Debug, Clone, Copy)]
@@ -63,12 +63,12 @@ pub enum AuthType {
     BiometricStrong = 2,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct KeyGenParameterSpec<'a>(JObjectWrapper<'a>);
+#[derive(Debug)]
+pub struct KeyGenParameterSpec<'a>(JObject<'a>);
 
 impl<'a> From<JObject<'a>> for KeyGenParameterSpec<'a> {
     fn from(value: JObject<'a>) -> Self {
-        Self(value.into())
+        Self(value)
     }
 }
 
@@ -78,17 +78,17 @@ impl<'a> Object<'a> for KeyGenParameterSpec<'a> {
             .expect("Failed to find KeyGenParameterSpec class")
     }
 
-    fn l(self) -> JObject<'a> {
-        self.0.l()
+    fn l(&self) -> &JObject<'a> {
+        &self.0
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Builder<'a>(JObjectWrapper<'a>);
+#[derive(Debug)]
+pub struct Builder<'a>(JObject<'a>);
 
 impl<'a> From<JObject<'a>> for Builder<'a> {
     fn from(value: JObject<'a>) -> Self {
-        Self(value.into())
+        Self(value)
     }
 }
 
@@ -98,8 +98,8 @@ impl<'a> Object<'a> for Builder<'a> {
             .expect("Failed to find KeyGenParameterSpec$Builder class")
     }
 
-    fn l(self) -> JObject<'a> {
-        self.0.l()
+    fn l(&self) -> &JObject<'a> {
+        &self.0
     }
 }
 

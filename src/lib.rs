@@ -2,7 +2,6 @@ use jni::{
     AttachGuard,
     objects::{JClass, JObject, JString, JValue},
     strings::JNIString,
-    sys::jobject,
 };
 
 pub mod keygen_parameter_spec;
@@ -12,61 +11,30 @@ pub mod utils;
 pub use keypair::PrivateKey;
 pub use utils::with_jni_env;
 
-pub trait Object<'a>: Sized {
+pub trait Object<'a> {
     fn class(env: &mut AttachGuard<'a>) -> JClass<'a>;
 
-    fn l(self) -> JObject<'a>;
+    fn l(&self) -> &JObject<'a>;
 
-    fn to_jstring(self, env: &mut AttachGuard<'a>) -> jni::errors::Result<JString<'a>> {
+    fn to_jstring(&self, env: &mut AttachGuard<'a>) -> jni::errors::Result<JString<'a>> {
         Ok(env
             .call_method(self.l(), "toString", "()Ljava/lang/String;", &[])?
             .l()?
             .into())
     }
 
-    fn to_jni_string(self, env: &mut AttachGuard<'a>) -> jni::errors::Result<JNIString> {
+    fn to_jni_string(&self, env: &mut AttachGuard<'a>) -> jni::errors::Result<JNIString> {
         let jstring = unsafe { JString::from_raw(**self.to_jstring(env)?) };
         Ok(env.get_string(jstring.as_ref())?.to_owned())
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-struct JObjectWrapper<'a> {
-    internal: jobject,
-    _marker: std::marker::PhantomData<&'a ()>,
-}
-
-impl<'a> JObjectWrapper<'a> {
-    fn new(internal: JObject<'a>) -> JObjectWrapper<'a> {
-        JObjectWrapper {
-            internal: *internal,
-            _marker: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<'a> From<JObject<'a>> for JObjectWrapper<'a> {
-    fn from(value: JObject<'a>) -> Self {
-        JObjectWrapper::new(value)
-    }
-}
-
-impl<'a> Object<'a> for JObjectWrapper<'a> {
-    fn class(_env: &mut AttachGuard<'a>) -> JClass<'a> {
-        panic!("Cannot get class of JObjectWrapper");
-    }
-
-    fn l(self) -> JObject<'a> {
-        unsafe { JObject::from_raw(self.internal) }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct AndroidKeyStore<'a>(JObjectWrapper<'a>);
+#[derive(Debug)]
+pub struct AndroidKeyStore<'a>(JObject<'a>);
 
 impl<'a> From<JObject<'a>> for AndroidKeyStore<'a> {
     fn from(value: JObject<'a>) -> Self {
-        AndroidKeyStore(value.into())
+        AndroidKeyStore(value)
     }
 }
 
@@ -91,7 +59,7 @@ impl<'a> AndroidKeyStore<'a> {
         .into()
     }
 
-    pub fn load(self, env: &mut AttachGuard<'a>) {
+    pub fn load(&self, env: &mut AttachGuard<'a>) {
         env.call_method(
             self.l(),
             "load",
@@ -101,7 +69,7 @@ impl<'a> AndroidKeyStore<'a> {
         .expect("Failed to call load() method");
     }
 
-    pub fn aliases(self, env: &mut AttachGuard<'a>) -> Vec<String> {
+    pub fn aliases(&self, env: &mut AttachGuard<'a>) -> Vec<String> {
         let mut res = vec![];
         let aliases = env
             .call_method(self.l(), "aliases", "()Ljava/util/Enumeration;", &[])
@@ -168,21 +136,21 @@ impl<'a> Object<'a> for AndroidKeyStore<'a> {
             .expect("Failed to find AndroidKeyStore class")
     }
 
-    fn l(self) -> JObject<'a> {
-        self.0.l()
+    fn l(&self) -> &JObject<'a> {
+        &self.0
     }
 }
 
-pub struct PrivateKeyEntry<'a>(JObjectWrapper<'a>);
+pub struct PrivateKeyEntry<'a>(JObject<'a>);
 
 impl<'a> From<JObject<'a>> for PrivateKeyEntry<'a> {
     fn from(value: JObject<'a>) -> Self {
-        PrivateKeyEntry(value.into())
+        PrivateKeyEntry(value)
     }
 }
 
 impl<'a> PrivateKeyEntry<'a> {
-    pub fn get_private_key(self, env: &mut AttachGuard<'a>) -> PrivateKey<'a> {
+    pub fn get_private_key(&self, env: &mut AttachGuard<'a>) -> PrivateKey<'a> {
         env.call_method(
             self.l(),
             "getPrivateKey",
@@ -202,7 +170,7 @@ impl<'a> Object<'a> for PrivateKeyEntry<'a> {
             .expect("Failed to find PrivateKeyEntry class")
     }
 
-    fn l(self) -> JObject<'a> {
-        self.0.l()
+    fn l(&self) -> &JObject<'a> {
+        &self.0
     }
 }

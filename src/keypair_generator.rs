@@ -1,8 +1,7 @@
 use jni::{AttachGuard, strings::JNIString};
 
 use crate::{
-    JClass, JObject, JObjectWrapper, JValue, Object, keygen_parameter_spec::KeyGenParameterSpec,
-    keypair::KeyPair,
+    JClass, JObject, JValue, Object, keygen_parameter_spec::KeyGenParameterSpec, keypair::KeyPair,
 };
 
 pub enum Algorithm {
@@ -51,12 +50,12 @@ pub enum Exception {
 /// A wrapper around a JObject representing a KeyPairGenerator instance
 /// KeyPairGenerator being a singleton, it must be created using the `get_instance()` method
 /// The instance obtained using `get_instance()` can then be used to generate a keypair
-#[derive(Debug, Clone, Copy)]
-pub struct KeyPairGenerator<'a>(JObjectWrapper<'a>);
+#[derive(Debug)]
+pub struct KeyPairGenerator<'a>(JObject<'a>);
 
 impl<'a> From<JObject<'a>> for KeyPairGenerator<'a> {
     fn from(value: JObject<'a>) -> Self {
-        Self(value.into())
+        Self(value)
     }
 }
 
@@ -92,7 +91,7 @@ impl<'a> KeyPairGenerator<'a> {
     }
 
     pub fn initialize(
-        self,
+        &self,
         keygen_parameter_spec: KeyGenParameterSpec<'a>,
         env: &mut AttachGuard<'a>,
     ) -> Result<(), Exception> {
@@ -100,7 +99,7 @@ impl<'a> KeyPairGenerator<'a> {
             self.l(),
             "initialize",
             "(Ljava/security/spec/AlgorithmParameterSpec;)V",
-            &[JValue::Object(&keygen_parameter_spec.l())],
+            &[JValue::Object(keygen_parameter_spec.l())],
         )
         // .map_err(Exception::InvalidAlgorithmParameterException)?
         ;
@@ -113,7 +112,7 @@ impl<'a> KeyPairGenerator<'a> {
         Ok(())
     }
 
-    pub fn generate_keypair(self, env: &mut AttachGuard<'a>) -> KeyPair<'a> {
+    pub fn generate_keypair(&self, env: &mut AttachGuard<'a>) -> KeyPair<'a> {
         env.call_method(
             self.l(),
             "generateKeyPair",
@@ -133,7 +132,7 @@ impl<'a> Object<'a> for KeyPairGenerator<'a> {
             .expect("Failed to find KeyPairGenerator class")
     }
 
-    fn l(self) -> JObject<'a> {
-        self.0.l()
+    fn l(&self) -> &JObject<'a> {
+        &self.0
     }
 }
